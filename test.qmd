@@ -4,7 +4,11 @@ author:
   - name: Sebastian Mosquera Martinez
   - name: Diego Fernando Juajibioy Chavez
   - name: Miguel Angel Lopez Moreno
-format: html
+format:
+  html:
+    toc: true        
+    toc-depth: 3       
+    number-sections: true  
 editor: source
 embed-resources: true
 ---
