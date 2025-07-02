@@ -1,0 +1,1055 @@
+---
+title: "Depuración de bases de datos"
+author:
+  - name: Sebastian Mosquera Martinez
+  - name: Diego Fernando Juajibioy Chavez
+  - name: Miguel Angel Lopez Moreno
+format: html
+editor: source
+embed-resources: true
+---
+## Introducción
+
+En Colombia, la pobreza ha sido y continúa siendo una de las principales problemáticas que afectan el desarrollo social y económico de diversas regiones. A lo largo del tiempo, ha causado efectos negativos y profundos en el acceso a derechos fundamentales como la educación, la salud, el trabajo decente y la seguridad alimentaria, afectando a una parte significativa de la población.
+
+El objetivo de este trabajo es analizar la relación entre índices como el IPM (Índice de Pobreza Multidimensional) y el NBI (Índice de Necesidades Básicas Insatisfechas) con las características y realidades de los municipios del departamento de Cundinamarca, a través de la creación, prueba y refutación de diversas hipótesis, apoyadas en un análisis descriptivo y exploratorio de datos.
+
+Además, se busca visibilizar y comunicar al público, de manera indirecta, que aún persiste una porción considerable de la población que vive en condiciones deplorables, a pesar del crecimiento económico sostenido que ha experimentado el país en las últimas décadas.
+
+## Bases de datos utilizadas
+
+Para el desarrollo del análisis, se utilizaron las siguientes bases de datos:
+
+"Pobreza y vivienda Cundinamarca": disponible en (https://www.datos.gov.co/dataset/POBREZA-Y-VIVIENDA-CUNDINAMARCA/rzwj-9ntv/about_data). Esta base proporciona información detallada sobre la pobreza en el departamento de Cundinamarca, desagregada a nivel municipal. Cuenta con 4,544 observaciones y 12 variables.
+
+Índice de Necesidades Básicas Insatisfechas (NBI): disponible en (https://www.dane.gov.co/index.php/estadisticas-por-tema/pobreza-y-condiciones-de-vida/necesidades-basicas-insatisfechas-nbi). Esta base ofrece información sobre el grado en que se satisfacen las necesidades básicas de la población. Los indicadores seleccionados incluyen: viviendas inadecuadas, viviendas con hacinamiento crítico, viviendas con servicios inadecuados, viviendas con alta dependencia económica y viviendas con niños en edad escolar que no asisten a la escuela.
+
+"Anexo Resultados IDF 2023": disponible en (https://www.dnp.gov.co/LaEntidad\_/subdireccion-general-descentralizacion-desarrollo-territorial/direccion-descentralizacion-fortalecimiento-fiscal/Paginas/informacion-fiscal-y-financiera.aspx). Esta base contiene los resultados del Índice de Desempeño Fiscal Territorial para 2023, que proporciona información relevante sobre el desempeño fiscal de los municipios de Cundinamarca.
+
+MGN2024 – Colombia (Todos los niveles geográficos): disponible en el Geoportal del DANE (https://geoportal.dane.gov.co/servicios/descarga-y-metadatos/datos-geoestadisticos/). Este archivo fue elaborado con la proyección oficial MAGNA-SIRGAS y el sistema de coordenadas UTM, conforme al estándar geodésico nacional. Contiene divisiones territoriales actualizadas a diferentes niveles, lo que lo hace ideal para análisis espaciales y demográficos con alta precisión.
+
+## Metodología
+
+La metodología empleada en este estudio se basa en un enfoque cuantitativo, utilizando un análisis descriptivo y exploratorio de datos. A continuación, se describen las etapas y procedimientos principales:
+
+Recolección de Datos: Se recopilaron diversas bases de datos de fuentes oficiales, como el DANE, el DNP y otras plataformas gubernamentales, que contienen información sobre pobreza, necesidades básicas insatisfechas, desempeño fiscal y divisiones territoriales a nivel municipal.
+
+Limpieza y Preparación de Datos: Los datos fueron depurados para eliminar posibles errores, duplicados y valores faltantes. También se unificaron las bases de datos para facilitar el análisis y garantizar la consistencia en las variables utilizadas.
+
+Análisis Descriptivo: Se realizaron análisis descriptivos básicos, como el cálculo de medias, medianas y desviaciones estándar, para entender las principales características de los municipios de Cundinamarca en relación con la pobreza y las necesidades básicas insatisfechas.
+
+Análisis Exploratorio: Se aplicaron técnicas de análisis exploratorio de datos (EDA, por sus siglas en inglés) para identificar patrones y relaciones entre los índices de pobreza (IPM y NBI) y otras variables socioeconómicas y demográficas de los municipios. Esto incluyó el uso de gráficos de dispersión, histogramas y mapas de calor.
+
+Prueba de Hipótesis: A través de pruebas estadísticas, como la correlación de Pearson y regresión múltiple, se evaluaron las relaciones entre los índices de pobreza y las características socioeconómicas de los municipios. Se formularon y pusieron a prueba varias hipótesis sobre la incidencia de factores como la calidad de la vivienda, el acceso a servicios públicos y el desempeño fiscal en los niveles de pobreza.
+
+Visualización de Resultados: Los resultados fueron presentados mediante gráficos y mapas interactivos para facilitar la interpretación y comunicación de los hallazgos. Se utilizaron herramientas de visualización como Tableau y R para la creación de dashboards y reportes dinámicos.
+
+Conclusiones y Recomendaciones: Finalmente, se elaboraron conclusiones sobre las principales relaciones encontradas y se plantearon recomendaciones para políticas públicas orientadas a reducir las brechas de pobreza en los municipios analizados.
+
+## Limpieza de bases de datos
+
+Los siguientes cambios se hicieron en las bases de datos
+
+**Pobreza y vivienda Cundinamarca**
+
+-   Se eliminaron 14 filas al principio que no cumplían ningún propósito.
+
+-   Se asignaron los alfanuméricos de la fila 15 (fila 1 después del cambio anterior) como los títulos de cada variable y, posteriormente se eliminó esta fila.
+
+-   Se excluyeron observaciones que tenian las siguientes características.
+
+    -   Contenían "COLOMBIA" en la variable "DEP" (Departamento).
+    -   Contenían "CUNDINAMARCA" o "COLOMBIA" en la variable "MUN" (Municipio).
+
+-   Se eliminaron variables que no tienen importancia para este análisis o que contaban con solo una categoría después de los cambios anteriores. (CODEP, DEP, CODMUN, DIMENSION, FUENTE, UNIDAD).
+
+-   Se convirtieron variables "chr" a "factor" y "num", dependiendo de si eran categóricas o numéricas, respectivamente.
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| results: hide
+
+library(sf)        # Leer shapefiles
+library(tmap)      # Mapas bonitos
+library(dplyr)     # Manipulación
+library(readxl)    # Leer Excel
+library(geosphere) # Distancia entre coordenadas
+library(tidyverse)
+library(stringr)
+library(osrm)
+library(leaflet)
+library(viridis)
+library(htmltools)
+library(stringi)
+
+
+
+## Carga de base de datos
+
+pobrezaoriginal <- read_excel("POBREZA_Y_VIVIENDA_CUNDINAMARCA_F.xlsx")
+pobreza <- read_excel("POBREZA_Y_VIVIENDA_CUNDINAMARCA_F.xlsx")
+
+# Remover filas inutiles al principio
+
+pobreza <- pobreza[-c(1:14),]
+
+# Asignar los alfanumericos de la fila 15 como los titulos de cada variable
+
+colnames(pobreza) <- as.character(unlist(pobreza[1,]))
+pobreza <- pobreza[-1,]
+
+# Excluir datos que tengan "COLOMBIA" como departamento y "CUNDINAMARCA" o "COLOMBIA" como municipio
+
+pobreza <- pobreza %>% 
+  filter(!(MUN == "COLOMBIA" | DEP == "COLOMBIA" | MUN == "CUNDINAMARCA"))
+
+# Eliminar variables que no tienen importancia para este analisis o cuentan con solo una categoria
+
+pobrezaglobal <- pobreza %>% 
+  select(-CODEP, -DEP, -CODMUN, -DIMENSION, -FUENTE, -UNIDAD)
+
+# Pasar variables "chr" a "factor" y "num"
+
+pobrezaglobal$DATO <- as.numeric(pobrezaglobal$DATO)
+pobrezaglobal <- pobrezaglobal %>% mutate(across(where(is.character), as.factor))
+
+```
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| results: hide
+## LECTURA DE MAPA
+
+#https://geoportal.dane.gov.co/servicios/descarga-y-metadatos/datos-geoestadisticos/ link de los datos obtenidos
+colombia_mapa_municipios <- st_read("datos-mapas/MGN2024_MPIO_POLITICO/MGN_ADM_MPIO_GRAFICO.shp")
+cundinamarca_municipio <- colombia_mapa_municipios |> # Realizar filtro de la base de datos de municipios por aquellos que pertenecen al departamento de Cundinamarca
+  filter(grepl("^cundinamarca\\b", tolower(trimws(dpto_cnmbr))))
+
+#---indice pobreza ---
+
+pobrezaoriginal <- read_excel("datos-mapas/POBREZA_Y_VIVIENDA_CUNDINAMARCA_F.xlsx", skip = 22) #Comenzar la lectura de la base de datos desde la fila 23 en adelante
+cundinamarca_municipio_PobrezaMul <- pobrezaoriginal |>  #Relizar filtro y selección de columnas que son necesarias
+  filter(!(MUN == "COLOMBIA" | DEP == "COLOMBIA" | MUN == "CUNDINAMARCA")) |> 
+  filter(INDICADOR == "INDICE DE POBREZA MULTIDIMENSIONAL - IPM") |> #Filtrar los datos de interés: variable IPM
+  select(-CODEP, -DEP,  -DIMENSION, -SUBCATEGORIA, -INDICADOR, -AREA,-ANO, -FUENTE, -UNIDAD)
+ 
+
+#Lectura de la base de datos del indice de Necesidades Basicas Satisfechas: https://www.dane.gov.co/index.php/estadisticas-por-tema/pobreza-y-condiciones-de-vida/necesidades-basicas-insatisfechas-nbi 
+Necesidades_insatisfecha <- read_excel("datos-mapas/necesidades_insatisfechas.xlsx", sheet = "Municipios", skip=9)
+
+#reasinar nombre de columnas 
+colnames(Necesidades_insatisfecha)[1:11] <- c("Codigo_Depart","Nombre_Depart","Codigo_Municipio","Nombre_Municipio","Prop_Personas_NBI","Prop_Personas_miseria","Componente_vivienda","Componente_Servicios","Componente_Hacinamiento","Componente_Inasistencia","Componente_dependencia_economica")
+
+#filtrar informacion por departamento de interes
+Necesidades_insatisfecha <- Necesidades_insatisfecha |>
+  select(1:11) |> 
+  filter(Codigo_Depart == 25)
+
+hogares <- pobrezaoriginal |> 
+  filter(!(MUN == "COLOMBIA" | DEP == "COLOMBIA" | MUN == "CUNDINAMARCA")) |> 
+  mutate(ANO= as.numeric(ANO)) |> # convertir la columna año en una variable numerica 
+  filter(grepl("^número.*area$", INDICADOR, ignore.case = TRUE) & grepl("^total$", AREA, ignore.case = TRUE) & ANO==2025 ) |> # filtrar de la base de datos la varible de interes mendiante condiciones
+  select(-CODEP, -DEP,  -DIMENSION, -SUBCATEGORIA, -INDICADOR, -AREA,-ANO, -FUENTE, -UNIDAD)
+
+
+# Crear columna de componente dominante
+Necesidades_insatisfecha <- Necesidades_insatisfecha |> 
+  mutate(componente_dominante = pmap_chr( # Componente dominante: necesidad basica mayoritaria
+    list(Componente_vivienda, Componente_Servicios, Componente_Hacinamiento, Componente_Inasistencia, Componente_dependencia_economica),
+    ~ c("Vivienda", "Servicios", "Hacinamiento", "Inasistencia", "Dependencia_economica")[which.max(c(...))]
+  ))
+
+#unir la pobreza multivariable a la base de datos principal
+cundinamarca_mapa_total <- cundinamarca_municipio |> 
+  left_join(cundinamarca_municipio_PobrezaMul, by = c("mpio_cdpmp"="CODMUN")) |> 
+  select(-MUN) |> 
+  rename("IPM" = "DATO")
+
+#Unir la Necesidades Basicas con la base de datos principal 
+cundinamarca_mapa_total <- cundinamarca_mapa_total |> 
+  left_join(
+    Necesidades_insatisfecha |> 
+      select(
+        cod_mpio = Codigo_Municipio,
+        nbi = Prop_Personas_NBI,
+        vivienda = Componente_vivienda,
+        servicios = Componente_Servicios,
+        hacinamiento = Componente_Hacinamiento,
+        inasistencia = Componente_Inasistencia,
+        dependencia_economica = Componente_dependencia_economica,
+        componente_dominante),
+        by = c("mpio_ccdgo"="cod_mpio"))
+
+#Unir Los Hogares por area con la base de datos principal
+cundinamarca_mapa_total <- cundinamarca_mapa_total |> 
+  left_join(
+    hogares |> 
+      select(
+        cod_mpio = CODMUN,
+        NHA = DATO
+      ),
+    by=c("mpio_cdpmp"="cod_mpio")
+  )
+```
+
+Después de esta limpieza, la base de datos pasó de tener 4544 observaciones y 12 variables, a tener 3712 observaciones y 6 variables.
+
+**Anexo Resultados IDF 2023**
+
+-   Se eliminaron 5 filas al principio que no cumplían ningún propósito.
+
+-   Se asignaron los alfanuméricos de la fila 6 (fila 1 después del cambio anterior) como los títulos de cada variable, y después se eliminó esta fila.
+
+-   Debido a que en este trabajo solo nos concentraremos en Cundinamarca, se excluyeron todas las observaciones que no sean de Cundinamarca.
+
+-   Se eliminaron variables que no tienen importancia para este análisis (Código, Departamento, Ciudad capital).
+
+-   Se convirtieron variables "chr" a "factor" y "num", dependiendo de si eran categóricas o numéricas respectivamente.
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| results: hide
+
+# Carga de base de datos
+
+idforiginal <- read_excel("ResultadosIDF_Nueva_MetodologIa_2023_Act.xlsx", sheet = 2)
+idf <- read_excel("ResultadosIDF_Nueva_MetodologIa_2023_Act.xlsx", sheet = 2)
+
+# Remover filas inutiles al principio
+
+idf <- idf[-c(1:5),]
+
+# Asignar los alfanumericos de la fila 6 como los titulos de cada variable
+
+colnames(idf) <- as.character(unlist(idf[1,]))
+idf <- idf[-1,]
+
+# Filtrar todas las observaciones que no sean de cundinamarca
+
+idf <- filter(idf, Departamento == "CUNDINAMARCA")
+
+# Eliminar variables que no tienen importancia para este analisis o cuentan con solo una categoria
+
+idf <- idf %>% select(-Código, -Departamento, -`Ciudad capital`)
+
+# Cambiar variables de "chr" a "Factor" y "num"
+
+idf <- idf %>%
+  mutate(across(c(Municipio, Categorías, `Dotaciones Iniciales`, `Bono Catastro`, Rango), as.factor))
+
+idf <- idf %>%
+  mutate(across(where(is.character), as.numeric))
+
+```
+
+Después de esta limpieza, la base de datos pasó de tener 1108 observaciones y 32 variables a tener 116 observaciones (una para cada municipio) y 29 variables.
+
+## Definiciones importantes
+
+**IPM (Índice de Pobreza Multidimensional):** Este indicador mide la proporción de la población que es pobre de manera multidimensional, considerando no solo los ingresos, sino también aspectos como la educación, salud, acceso a servicios y calidad de vida.
+
+Tomado de https://www.datos.gov.co/dataset/POBREZA-Y-VIVIENDA-CUNDINAMARCA/rzwj-9ntv/about_data
+
+**NBI (Índice de Necesidades Básicas Insatisfechas):** Es un indicador que mide el porcentaje de hogares que no tienen satisfechas una o más de las necesidades básicas (vivienda adecuada, acceso a servicios básicos, acceso a educación, etc.). Este índice refleja la privación material en una población.
+
+Tomado de https://www.datos.gov.co/dataset/POBREZA-Y-VIVIENDA-CUNDINAMARCA/rzwj-9ntv/about_data
+https://www.dane.gov.co/index.php/estadisticas-por-tema/pobreza-y-condiciones-de-vida/necesidades-basicas-insatisfechas-nbi
+
+**IDF (Índice de Desempeño Fiscal):** El IDF es una medición que evalúa el desempeño de la gestión financiera de las entidades territoriales basada en dos componentes, el primero, los resultados fiscales, que equivale al 80% de la ponderación, y contempla las variables de dependencia de las transferencias, la inversión en Formación Bruta de Capital Fijo (FBKF), la situación de endeudamiento, la capacidad de generar ahorro corriente y el balance fiscal. El segundo componente, denominado gestión financiera, equivale al 20%, y contempla las variables relacionadas con la gestión de las entidades territoriales para lograr una adecuada planeación y programación de sus ingresos, la ejecución de los compromisos en la vigencia y el cumplimiento con holgura de los límites a los gastos de funcionamiento.
+
+Tomado de https://www.dnp.gov.co/Prensa\_/Noticias/Paginas/dnp-presento-los-resultados-del-indice-de-desempeno-fiscal-para-la-vigencia-2023-de-los-municipios.aspx
+
+## Análisis de los mapas
+
+Se creó un total de 3 mapas, que se pueden ver a continuación:
+
+**Mapa de IPM y NBI**
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-height: 20
+#| fig-width: 20
+#| message: false
+
+#Asignar Paleta de Colores
+pal_ipm <- colorNumeric("viridis", cundinamarca_mapa_total$IPM)
+pal_nbi <- colorNumeric("viridis", cundinamarca_mapa_total$nbi)
+
+# Crear etiquetas enriquecidas para tooltip
+etiquetas_imp <- sprintf(
+  "<strong>%s</strong><br/>Índice PM: %s",
+  cundinamarca_mapa_total$mpio_cnmbr,
+  cundinamarca_mapa_total$IPM
+) |> lapply(HTML)
+
+#Crear etiqueta enriquecidas 
+etiquetas_nbi <- sprintf(
+  "<strong>%s</strong><br/>Necesidad Basica Dominante: %s",
+  cundinamarca_mapa_total$mpio_cnmbr,
+  cundinamarca_mapa_total$componente_dominante
+) |> lapply(HTML)
+
+# Crear mapa leaflet centrado y restringido a Cundinamarca
+leaflet(cundinamarca_mapa_total, options = leafletOptions(minZoom = 7.5, maxZoom = 12)) |>
+  setView(lng = -74.3, lat = 4.8, zoom = 9) |>
+  addProviderTiles("CartoDB.Positron") |>
+  
+  # Capa IPM
+  addPolygons(
+    fillColor = ~pal_ipm(IPM),
+    color = "white",
+    weight = 1,
+    opacity = 1,
+    group = "IPM",
+    fillOpacity = 0.8,
+    highlight = highlightOptions(
+      weight = 2,
+      color = "#333",
+      fillOpacity = 0.9,
+      bringToFront = TRUE
+    ),
+    label = etiquetas_imp,
+    labelOptions = labelOptions(
+      style = list("font-weight" = "bold", "color" = "#222"),
+      textsize = "14px",
+      direction = "auto"
+    )
+  )|>
+  # Capa NBI
+  addPolygons(
+    fillColor = ~pal_nbi(nbi),
+    color = "white",
+    weight = 1,
+    opacity = 1,
+    fillOpacity = 0.8,
+    highlight = highlightOptions(
+      weight = 2,
+      color = "#333",
+      fillOpacity = 0.9,
+      bringToFront = TRUE),
+    group = "NBI",
+    label = etiquetas_nbi,
+    labelOptions = labelOptions(
+      style = list("font-weight" = "bold", "color" = "#222"),
+      textsize = "14px",
+      direction = "auto"
+    )
+  ) |>
+  
+  # Leyendas
+  addLegend("bottomright", pal = pal_ipm, values = ~IPM, title = "Indice Pobreza Mult.", group = "IPM") |>
+  addLegend("bottomright", pal = pal_nbi, values = ~nbi, title = "Indice Nec. Basicas Ins.", group = "NBI") |>
+  
+  # Control de capas
+  addLayersControl(
+    baseGroups = c("IPM", "NBI"),
+    options = layersControlOptions(collapsed = FALSE)
+  ) |> 
+  addControl(
+      html = tags$div(
+        style = "padding: 10px; background: rgba(255,255,255,0.9); border-radius: 8px; box-shadow: 0 0 8px rgba(0,0,0,0.3);",
+        HTML("<strong>Mapa de Cundinamarca</strong><br/>
+          <small>Pobreza Multidimensional Y Necesidades Basicas Insatisfechas<br/>
+          Fuente: DANE· Elaboración propia</small>")
+    ),
+    position = "topleft" # Posición de titulo 
+  )
+```
+
+Este mapa combina dos dimensiones fundamentales de la pobreza: el **Índice de Pobreza Multidimensional (IPM)** y el **Índice de Necesidades Básicas Insatisfechas (NBI)**.
+
+-   El **IPM** refleja condiciones más estructurales y sociales, como acceso a educación, empleo formal, salud, servicios públicos y condiciones de la vivienda. Mientras que el **NBI** se enfoca en carencias materiales específicas y más visibles, como hacinamiento, falta de servicios sanitarios, y viviendas inadecuadas.
+
+-   Se observa que los municipios del **este de Bogotá** presentan niveles más bajos de IPM, lo cual puede explicarse por la cercanía con zonas industriales, acceso a infraestructura, empleo formal y políticas sociales urbanas.
+
+-   Por otro lado, el **NBI** es más bajo en los municipios **más cercanos a la capital**, lo que refuerza la idea de que Bogotá actúa como un nodo de distribución de oportunidades básicas.
+
+-   En algunos municipios existe una **desconexión entre IPM y NBI**, lo que evidencia que mejorar condiciones materiales (NBI) no garantiza mejoras multidimensionales (IPM), y viceversa.
+
+-   Este mapa resulta útil para focalizar intervenciones sociales diferenciadas: unas orientadas a carencias estructurales y otras a servicios básicos.
+
+**Mapa de Desempeño fiscal y saldo transferencias-ahorro**
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-height: 20
+#| fig-width: 20
+#| message: false
+ 
+#Desarrollo del segundo Mapa bajo la temática de Desempeño Fiscal
+
+Desemp_fiscal <- read_excel("datos-mapas/IDesempFiscal.xlsx", sheet = "Municipios 2023",skip=6) # realizar lectura de la base de datos: https://www.dnp.gov.co/LaEntidad_/subdireccion-general-descentralizacion-desarrollo-territorial/direccion-descentralizacion-fortalecimiento-fiscal/Paginas/informacion-fiscal-y-financiera.aspx
+Desemp_fiscal <- Desemp_fiscal |> 
+  filter(grepl("^cundinamarca\\b", tolower(trimws(Departamento))))
+
+#Desempeño entre la dependencia de las transferencias y el ahorro corriente
+Desemp_fiscal$saldo_Transferencia_Ahorro <- as.numeric(Desemp_fiscal$`Dependencia de las Transferencias`) - as.numeric(Desemp_fiscal$`Ahorro Corriente`)
+
+#unir datos en un solo data frame
+cundinamarca_mapa_desempFiscal <- cundinamarca_municipio |> 
+  left_join( Desemp_fiscal |> 
+               select(
+                 cod_mpio = `Código`,
+                 depenTransf = `Dependencia de las Transferencias`,
+                 ahorro =`Ahorro Corriente`,
+                 desempeño_fiscal= `Nuevo IDF`,
+                 saldo = saldo_Transferencia_Ahorro
+               ), by=c("mpio_cdpmp"="cod_mpio")) |> 
+  mutate(saldo = round(saldo, 3))
+
+#__________________________________________________________________________________
+# ***** | CREAR MAPA Desempeño Fiscal y Transferencias Economicas vs Ahorro | *****
+
+#Asignar Paleta de Colores
+pal_IDF <- colorNumeric("viridis", cundinamarca_mapa_desempFiscal$desempeño_fiscal)
+pal_saldo <- colorNumeric("viridis", cundinamarca_mapa_desempFiscal$saldo)
+
+# Crear etiquetas enriquecidas para tooltip
+etiquetas_IDF <- sprintf(
+  "<strong>%s</strong><br/>Desempeño Fiscal: %.1f%%",
+  cundinamarca_mapa_desempFiscal$mpio_cnmbr,
+  cundinamarca_mapa_desempFiscal$desempeño_fiscal
+) |> lapply(HTML)
+
+#Crear etiqueta enriquecidas 
+etiquetas_saldo <- sprintf(
+  "<strong>%s</strong><br/> Difer. DepTransf-Ahorro: %s",
+  cundinamarca_mapa_desempFiscal$mpio_cnmbr,
+  cundinamarca_mapa_desempFiscal$saldo
+) |> lapply(HTML)
+
+# Crear mapa leaflet centrado y restringido a Cundinamarca
+leaflet(cundinamarca_mapa_desempFiscal, options = leafletOptions(minZoom = 7.5, maxZoom = 12)) |>
+  setView(lng = -74.3, lat = 4.8, zoom = 9) |>
+  addProviderTiles("CartoDB.Positron") |>
+  
+  # Capa Desempeño Fiscal
+  addPolygons(
+    fillColor = ~pal_IDF(desempeño_fiscal),
+    color = "white",
+    weight = 1,
+    opacity = 1,
+    group = "Desempeño Fiscal",
+    fillOpacity = 0.8,
+    highlight = highlightOptions(
+      weight = 2,
+      color = "#333",
+      fillOpacity = 0.9,
+      bringToFront = TRUE
+    ),
+    label = etiquetas_IDF,
+    labelOptions = labelOptions(
+      style = list("font-weight" = "bold", "color" = "#222"),
+      textsize = "14px",
+      direction = "auto"
+    )
+  )|>
+  # Capa Saldo - Trsnfe - Ahorro
+  addPolygons(
+    fillColor = ~pal_saldo(saldo),
+    color = "white",
+    weight = 1,
+    opacity = 1,
+    fillOpacity = 0.8,
+    highlight = highlightOptions(
+      weight = 2,
+      color = "#333",
+      fillOpacity = 0.9,
+      bringToFront = TRUE),
+    group = "Saldo Transferencias-Ahorro",
+    label = etiquetas_saldo,
+    labelOptions = labelOptions(
+      style = list("font-weight" = "bold", "color" = "#222"),
+      textsize = "14px",
+      direction = "auto"
+    )
+  ) |>
+  
+  # Leyendas
+  addLegend("bottomright", pal =pal_IDF, values = ~desempeño_fiscal, title = "Desempeño fiscal", group = "Desempeño Fiscal") |>
+  addLegend("bottomright", pal = pal_saldo, values = ~saldo, title = "Diff. DepeTrns - Ahor", group = "Saldo Transferencias-Ahorro") |>
+  
+  # Control de capas
+  addLayersControl(
+    baseGroups = c("Desempeño Fiscal", "Saldo Transferencias-Ahorro"),
+    options = layersControlOptions(collapsed = FALSE)
+  ) |> 
+  addControl(
+      html = tags$div(
+        style = "padding: 10px; background: rgba(255,255,255,0.9); border-radius: 8px; box-shadow: 0 0 8px rgba(0,0,0,0.3);",
+        HTML("<strong>Mapa de Cundinamarca</strong><br/>
+          <small>Desempeño Fiscal Y Dependencia de Transferencias Vs Ahorro Corriente (2023)<br/>
+          Fuente: DNP· Elaboración propia</small>")
+    ),
+    position = "topleft" # Posición de titulo 
+  )
+
+```
+
+Este mapa compara dos indicadores clave de gestión pública local:
+
+1.  **Desempeño fiscal**: mide la capacidad del municipio para manejar adecuadamente sus recursos, incluyendo, ingresos propios, gastos, endeudamiento y ahorro.
+
+2.  **Saldo entre transferencias y ahorro corriente**: representa la dependencia del municipio frente a recursos del gobierno nacional con respecto a la capacidad de ahorrar e invertir.
+
+-   Se identifica al municipio de **Guasca** como un caso atípico con un bajo desempeño fiscal, lo que podría reflejar problemas de gestión, baja capacidad técnica o dificultades administrativas.
+
+-   Los municipios **más cercanos a Bogotá** muestran mejores desempeños fiscales y saldos positivos, posiblemente gracias a mayores ingresos propios (impuestos, tasas) y mejor capacidad institucional.
+
+-   En municipios más alejados, es común observar un **mayor grado de dependencia** de transferencias del gobierno central, con capacidad de ahorro más limitada.
+
+-   Este mapa permite identificar áreas donde podrían implementarse programas de fortalecimiento institucional y autonomía fiscal.
+
+**Mapa de Distancia a la capital y Capacidad presupuestal**
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-height: 20
+#| fig-width: 20
+#| message: false
+
+#========================
+#--- Distancia ---
+#========================
+
+#Crear centroide desde bogotá 
+
+bogota_point <- data.frame(
+  id="BOGOTA",
+  lon = -74.0721,
+  lat = 4.7110
+  ) |> 
+  st_as_sf(coords = c("lon","lat"), crs=4326)
+
+#Calcular centroides y guardar en objetos 
+centroides <- cundinamarca_municipio |> 
+  mutate(id=as.character(mpio_cnmbr)) |> 
+  st_centroid() 
+
+#Extraer coordenadas
+coords <- st_coordinates(centroides)
+
+#Unirlas coodenadas
+municipios_pts <- centroides |> 
+  mutate(lon= coords[,1],
+         lat= coords[,2]) |> 
+  select(id, mpio_cdpmp, lon, lat, geometry)
+
+#Nombre de los municipios
+nombre_municip <-municipios_pts$mpio_cdpmp
+
+#calcular distancia viales desde bogotá a todos los municipios 
+distancias <- osrmTable(src=bogota_point, dst=municipios_pts, measure = "distance")
+
+#Extraer la distancia creada
+dist_km_municipios <- distancias$distances |> 
+  t() |> 
+  as.data.frame() 
+
+#Asignar nombres como rownames
+rownames(dist_km_municipios) <- nombre_municip
+
+#data frame de distancias a la capital
+dist_km_municipios <- dist_km_municipios |> 
+  rownames_to_column("Municipio") |> 
+  rename(Distancia_km = 2)
+
+#Unir base de datos 
+cundinamarca_mapa_distancia <- cundinamarca_municipio |> 
+  left_join(
+    dist_km_municipios, by=c("mpio_cdpmp"="Municipio") 
+  ) |> 
+  left_join(
+    Desemp_fiscal |> 
+      select(
+        cod_mpio = `Código`,
+        capacidad_inv=`Capacidad de Ejecución de Inversión`), by=c("mpio_cdpmp"="cod_mpio")
+  )
+
+#___________________________________________________________________________
+# ***** | CREAR MAPA Distancia a Bogotá Ejecución presupuesto fiscal| *****
+
+#Convertir numeric la columna capacidad_inv
+cundinamarca_mapa_distancia <- cundinamarca_mapa_distancia |>
+  mutate(capacidad_inv = as.numeric(capacidad_inv))
+
+#Asignar Paleta de Colores
+pal_dist <- colorNumeric("viridis", cundinamarca_mapa_distancia$Distancia_km)
+pal_eject <- colorNumeric("viridis", cundinamarca_mapa_distancia$capacidad_inv)
+
+# Crear etiquetas enriquecidas para tooltip
+etiquetas_dist <- sprintf(
+  "<strong>%s</strong><br/>Distancia Km: %.1f Km",
+  cundinamarca_mapa_distancia$mpio_cnmbr,
+  cundinamarca_mapa_distancia$Distancia_km
+) |> lapply(HTML)
+
+#Crear etiqueta enriquecidas 
+etiquetas_invers <- sprintf(
+  "<strong>%s</strong><br/> Cap. Ejec. Presupuesto: %s",
+  cundinamarca_mapa_distancia$mpio_cnmbr,
+  cundinamarca_mapa_distancia$capacidad_inv
+) |> lapply(HTML)
+
+# Crear mapa leaflet centrado y restringido a Cundinamarca
+leaflet(cundinamarca_mapa_distancia, options = leafletOptions(minZoom = 7.5, maxZoom = 12)) |>
+  setView(lng = -74.3, lat = 4.8, zoom = 9) |>
+  addProviderTiles("CartoDB.Voyager") |>
+  
+  # Capa Distancia Km
+  addPolygons(
+    fillColor = ~pal_dist(Distancia_km),
+    color = "white",
+    weight = 1,
+    opacity = 1,
+    group = "Distancia a Bogotá",
+    fillOpacity = 0.8,
+    highlight = highlightOptions(
+      weight = 2,
+      color = "#333",
+      fillOpacity = 0.3,
+      bringToFront = TRUE
+    ),
+    label = etiquetas_dist,
+    labelOptions = labelOptions(
+      style = list("font-weight" = "bold", "color" = "#222"),
+      textsize = "14px",
+      direction = "auto"
+    )
+  )|>
+  # Capa capacidad de ejecucion del presupuesto
+  addPolygons(
+    fillColor = ~pal_eject(capacidad_inv),
+    color = "white",
+    weight = 1,
+    opacity = 1,
+    fillOpacity = 0.8,
+    highlight = highlightOptions(
+      weight = 2,
+      color = "#333",
+      fillOpacity = 0.3,
+      bringToFront = TRUE),
+    group = "Capacidad Presupuestal",
+    label = etiquetas_invers,
+    labelOptions = labelOptions(
+      style = list("font-weight" = "bold", "color" = "#222"),
+      textsize = "14px",
+      direction = "auto"
+    )
+  ) |>
+  
+  # Leyendas
+  addLegend("bottomright", pal =pal_dist, values = ~Distancia_km, title = "Distancia a Bogotá", group = "Distancia a Bogotá") |>
+  addLegend("bottomright", pal = pal_eject, values = ~capacidad_inv, title = "Capacidad Presupuestal", group = "Capacidad Presupuestal") |>
+  
+  # Control de capas
+  addLayersControl(
+    baseGroups = c("Distancia a Bogotá", "Capacidad Presupuestal"),
+    options = layersControlOptions(collapsed = FALSE)
+  ) |> 
+  addControl(
+    html = tags$div(
+      style = "padding: 10px; background: rgba(255,255,255,0.9); border-radius: 8px; box-shadow: 0 0 8px rgba(0,0,0,0.3);",
+      HTML("<strong>Mapa de Cundinamarca</strong><br/>
+          <small>Distancia a Bogotá y capacidad de ejecución presupuestal<br/>
+          Fuente: DNP – Elaboración propia</small>")
+    ),
+    position = "topleft" # Posición de titulo 
+  ) |> 
+  addCircleMarkers(data = bogota_point,
+                   radius = 6,
+                   color = "red",
+                   stroke = TRUE,
+                   fillOpacity = 0.9,
+                   label = "Bogotá D.C.") 
+
+```
+
+Este mapa ilustra cómo la **próximidad a Bogotá** se relaciona con la **capacidad presupuestal de los municipios**, entendida como la suma de recursos disponibles para inversión y funcionamiento.
+
+-   Se confirma una **relación inversa entre distancia y capacidad presupuestal**: los municipios más cercanos a la capital tienden a contar con mayores recursos.
+
+-   Esto puede estar influenciado por:
+
+    -   Mayores ingresos tributarios (predial, industria y comercio).
+
+    -   Mayor presencia de empresas e instituciones del Estado.
+
+    -   Facilidad para atraer inversión pública y privada.
+
+-   La concentración presupuestal en la zona central sugiere una posible necesidad de revisar los criterios de distribución de recursos intermunicipales para equilibrar oportunidades de desarrollo.
+
+-   Este patrón también puede tener implicaciones en la calidad de servicios públicos, infraestructura y oportunidades para los habitantes más alejados del centro económico.
+
+**Mapa de Número de Hogares por área**
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-height: 20
+#| fig-width: 20
+#| message: false
+#_______________________________________________
+# ***** | CREAR MAPA NHA| *****
+
+#Asignar Paleta de Colores
+pal_NHA <- colorNumeric("viridis", cundinamarca_mapa_total$NHA)
+
+# Crear etiquetas enriquecidas para tooltip
+etiquetas_NHA <- sprintf(
+  "<strong>%s</strong><br/>Número Hogares Area: %s",
+  cundinamarca_mapa_total$mpio_cnmbr,
+  cundinamarca_mapa_total$NHA
+) |> lapply(HTML)
+
+# Crear mapa leaflet centrado y restringido a Cundinamarca
+leaflet(cundinamarca_mapa_total, options = leafletOptions(minZoom = 7.5, maxZoom = 12)) |>
+  setView(lng = -74.3, lat = 4.8, zoom = 9) |>
+  addProviderTiles("CartoDB.Positron") |>
+  
+  # Capa IPM
+  addPolygons(
+    fillColor = ~pal_NHA(NHA),
+    color = "white",
+    weight = 1,
+    opacity = 1,
+    group = "NHA",
+    fillOpacity = 0.8,
+    highlight = highlightOptions(
+      weight = 2,
+      color = "#333",
+      fillOpacity = 0.9,
+      bringToFront = TRUE
+    ),
+    label = etiquetas_NHA,
+    labelOptions = labelOptions(
+      style = list("font-weight" = "bold", "color" = "#222"),
+      textsize = "14px",
+      direction = "auto"
+    )
+  )|>
+  
+  # Leyendas
+  addLegend("bottomright", pal = pal_NHA, values = ~NHA, title = "Numero Hogares Area", group = "NHA") |>
+  
+  # Control de capas
+  addLayersControl(
+    baseGroups = c("NHA"),
+    options = layersControlOptions(collapsed = FALSE)
+  ) |> 
+  addControl(
+      html = tags$div(
+        style = "padding: 10px; background: rgba(255,255,255,0.9); border-radius: 8px; box-shadow: 0 0 8px rgba(0,0,0,0.3);",
+        HTML("<strong>Mapa de Cundinamarca</strong><br/>
+          <small>Número de hogares por Área (2025)<br/>
+          Fuente: IDEE· Elaboración propia</small>")
+    ),
+    position = "topleft" # Posición de titulo 
+  )
+
+```
+
+Este mapa representa el **número total de hogares por municipio** según el área, lo cual es un indicador importante para planeación territorial y prestación de servicios.
+
+-   Se observa una fuerte concentración de hogares en el **centro del departamento**, especialmente alrededor de Bogotá.
+
+-   Este patrón responde a la expansión urbana, crecimiento poblacional acelerado y migración interna desde zonas rurales a urbanas.
+
+-   Los municipios periféricos presentan una **menor densidad de hogares**, lo que podría generar:
+
+    -   Retos logísticos en la prestación de servicios públicos.
+
+    -   Dificultades en cobertura de salud, educación, transporte y conectividad.
+
+-   Este mapa es clave para políticas de vivienda, cobertura energética, educación y saneamiento básico, al permitir identificar las zonas con mayor carga poblacional.
+
+## Análisis de estas afirmaciones
+
+**El IPM (Indice de Pobreza Multidimensional) tiende a tener un porcentaje más bajo en los municipios situados al este de Bogotá:** Una posible explicación a este comportamiento en el primer mapa sería que el este de Cundinamarca suele ser más urbano que el oeste.
+
+El IPM es calculado no solo por los ingresos, sino también por otros aspectos como la salud, educación, acceso a servicios y calidad de vida. Todos estos son aspectos que se pueden ver afectados por la "baja urbanidad" de algunos municipios.
+
+Entonces es posible que los municipios más rurales tengan un mayor IPM a comparación de los municipios más urbanos.
+
+Para probar o desmentir esta hipótesis, decidimos hacer un gráfico de dispersión que relacione la **porporción de hogares urbanos frente a rurales por cada municipio**, calculado con la fórmula $$
+\frac{Cantidad\ Hogares\ Urbanos}{Cantidad\ Hogares\ Rurales}
+$$ y **el IPM de cada municipio**
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| results: hide
+
+library(tidyr)
+library(ggplot2)
+
+# Creación de dataframe que solo contiene el IPM
+
+pobrezaIPM <- filter(pobrezaglobal, SUBCATEGORIA == "INDICE DE POBREZA MULTIDIMENSIONAL" & INDICADOR == "INDICE DE POBREZA MULTIDIMENSIONAL - IPM")
+
+# Remover columnas
+
+pobrezaIPM <- pobrezaIPM %>% select(-SUBCATEGORIA, -INDICADOR, -AREA, -ANO)
+
+# Renombrar columna "DATO"
+
+pobrezaIPM <- pobrezaIPM %>% rename(IPM = DATO)
+
+# Creación de dataframe que solo contiene # de hogares rurales y # de  hogares urbanos
+
+pobrezaHog <- filter(pobrezaglobal, SUBCATEGORIA == "HOGARES Y VIVIENDA")
+pobrezaHog <- filter(pobrezaHog, !(AREA == "TOTAL"))
+pobrezaHog <- filter(pobrezaHog, ANO == "2025")
+
+pobrezaHogWide <- pobrezaHog %>% 
+  pivot_wider(names_from = AREA,
+              values_from = DATO)
+
+# Remover columnas que no cumplen ningun proposito
+
+pobrezaHogWide <- pobrezaHogWide %>% select(-SUBCATEGORIA, -INDICADOR, -ANO)
+
+# Creación de nueva variable que muestre la proporcion entre "CABECERA" y "CENTROS POBLADOS Y RURAL DISPERSO"
+
+pobrezaHogWide <- pobrezaHogWide %>% 
+  mutate(PropCabCPyRD = CABECERA / `CENTROS POBLADOS Y RURAL DISPERSO`)
+
+# Unión de ambos dataframes
+
+pobrezaIPMHog <- inner_join(pobrezaIPM, pobrezaHogWide)
+
+# Remover datos atipicos usando el rango intercuartil
+
+pobrezaIPMHogSinAtp <- pobrezaIPMHog %>%
+  filter(PropCabCPyRD > quantile(PropCabCPyRD, 0.25, na.rm = TRUE) - 1.5 * IQR(PropCabCPyRD, na.rm = TRUE) & 
+           PropCabCPyRD < quantile(PropCabCPyRD, 0.75, na.rm = TRUE) + 1.5 * IQR(PropCabCPyRD, na.rm = TRUE))
+
+# Grafico de dispersión
+
+ggplot(pobrezaIPMHogSinAtp, aes(x = IPM, y = PropCabCPyRD)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  theme_light() +
+  labs(title = "Relación entre la proporción de cantidad de hogares urbanos
+       sobre cantidad de hogares rurales y el IPM por municipio",
+       x = "IPM",
+       y = "Proporción entre cantidad de hogares urbanos sobre 
+       cantidad de hogares rurales")
+
+# Coeficiente de correlación
+
+coripmhog <- cor(pobrezaIPMHogSinAtp$IPM, pobrezaIPMHogSinAtp$PropCabCPyRD, use = "complete.obs")
+
+```
+
+Con este gráfico y el índice de correlación entre estas dos variables (aproximadamente -0.42) se puede afirmar que existe una relación lineal negativa moderada entre el IPM y la proporción de hogares urbanos sobre rurales en los municipios de Cundinamarca. A mayor nivel de pobreza, la presencia de hogares urbanos disminuye. Hecho que explica el comportamiento del mapa.
+
+Pensamos que esta relación no es tan fuerte debido a que:
+
+-   Los datos del IPM fueron tomados en 2018, y los datos de la cantidad de hogares fueron tomados en 2025. Esta diferencia de 7 años puede estar haciendo que las observaciones se encuentren más dispersas en el gráfico.
+
+-   Pueden haber otras variables afectando al IPM que no fueron consideradas y se salen de los temas abordados en este trabajo.
+
+Sin embargo, pensamos que esta relación existe debido a que en estas zonas rurales, servicios como el transporte o la comunicación suelen ser más difíciles en comparación de las zonas urbanas. Las carreteras son de menor calidad, el terreno suele ser irregular, pueden no pasar buses o taxis, la infraestructura tiene menor presupuesto, puede no haber buena señal telefonica, etc. Esta dificultad en el transporte y la comunicación afecta al IPM debido a que puede comprometer necesidades básicas como la salud y la educación.
+
+**El NBI (Indice de Necesidades Básicas Insatisfechas) tiende a tener un porcentaje más bajo en los municipios más cercanos a Bogotá:** Es bastante lógico pensar que la distancia que tiene un municipio a la capital afecta directamente la calidad de sus viviendas. Zonas cercanas a Bogotá pueden tener mayor visibilidad ante el gobierno, acceso más fácil a recursos del Estado y tener acceso a una mayor inversión en infraestructura.
+
+Además, es posible que los municipios que estan más cerca a Bogotá han recibido más ayuda de este mismo a lo largo del tiempo. Y los habitantes de estos municipios también pueden tener una mayor facilidad adquiriendo ingresos al encontrar en Bogotá empleo, comercio, educación, etc.
+
+Para probar o desmentir esta hipótesis, decidimos hacer un gráfico de dispersión que relacione el NBI ponderado entre areas rurales y urbanas, obtenido con la fórmula $$
+\text{NBI} = \text{NBI}{\text{ en Areas Rurales}} \cdot \left( \frac{\# \text{ de hogares rurales}}{\# \text{ total de hogares}} \right) + \text{NBI}{\text{ en Areas Urbanas}} \cdot \left( \frac{\# \text{ de hogares urbanos}}{\# \text{ total de hogares}} \right)
+$$ con la distancia a Bogotá de cada municipio
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| results: hide
+
+# Creación de nueva variable, cantidad total de hogares por municipio
+
+pobrezaHogWide <- pobrezaHogWide %>% mutate(HogTotal = CABECERA + `CENTROS POBLADOS Y RURAL DISPERSO`)
+
+# Creación de dataframe que solo contiene el NBI
+
+pobrezaNBI <- filter(pobrezaglobal, SUBCATEGORIA == "INDICE DE NECESIDADES BASICAS INSATISFECHAS - NBI")
+pobrezaNBI <- pobrezaNBI %>% pivot_wider(names_from = AREA,
+                                         values_from = DATO)
+
+# Union de dataframes NBI y cantidad de hogares
+
+pobrezaHogNBI <- inner_join(pobrezaNBI, pobrezaHogWide)
+
+# Creacion de nueva variable del NBI ponderado entre areas rurales y urbanas de cada municipio
+
+pobrezaHogNBI <- pobrezaHogNBI %>% 
+  mutate(NBI = RURAL * `CENTROS POBLADOS Y RURAL DISPERSO` / HogTotal + URBANA * CABECERA / HogTotal)
+
+# Remover columnas que no cumplen ningun proposito
+
+pobrezaHogNBI <- pobrezaHogNBI %>% select(-SUBCATEGORIA, -INDICADOR, -ANO)
+
+# Aqui tocaria unir esta base de datos con la que tenga la distancia a bogotá
+
+#Quitar tilde de la base de datos
+cundinamarca_mapa_distancia_sintilde <- cundinamarca_mapa_distancia |> 
+  mutate(mpio_clean = stri_trans_general(mpio_cnmbr, "Latin-ASCII"))
+
+pobrezaHogNBI <- pobrezaHogNBI |> 
+  left_join(cundinamarca_mapa_distancia_sintilde |> 
+              select(
+                distancia = Distancia_km,
+                municipios = mpio_clean
+              ), by=c("MUN"="municipios"))
+
+# Grafico de dispersión entre NBI y distancia a Bogotá (1 es distancia a bogota)
+
+ggplot(pobrezaHogNBI, aes(x = NBI, y = distancia)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  theme_light() +
+  labs(title = "Relación entre NBI y distancia a Bogotá",
+       x = "NBI",
+       y = "Distancia a Bogotá")
+
+```
+
+El gráfico evidencia una relación positiva entre el porcentaje de Necesidades Básicas Insatisfechas (NBI) y la distancia a Bogotá. En términos generales, esto implica que a mayor distancia de la capital, mayor es el nivel de pobreza o carencias básicas en los municipios, lo cual respalda la hipótesis previamente planteada.
+
+Si bien se observa cierta dispersión en los datos —es decir, no todos los municipios se ajustan perfectamente a esta tendencia—, la línea azul de regresión sugiere una relación clara: los municipios más alejados de Bogotá tienden a presentar niveles más altos de NBI.
+
+Esta situación puede interpretarse como una manifestación del centralismo geográfico y administrativo del país.Los municipios cercanos a la capital suelen tener un mejor acceso a infraestructura, servicios públicos, educación y oportunidades económicas, mientras que aquellos más distantes permanecen en condiciones de mayor aislamiento y rezago, lo que se traduce en una mayor vulnerabilidad frente al desarrollo nacional.
+
+**El municipio de Guasca según la base de datos tiene un desempeño fiscal mucho peor a los demás:** En este caso, lo visto en el mapa puede no reflejar la realidad, ya que los datos de este municipio para muchas de las otras variables que se usan para calcular el desempeño fiscal se encuentran como NAs o ceros en la base de datos. Entonces lo más probable es que el desempeño fiscal de Guasca fuera calculado tan bajo debido a la falta de registros de este municipio o a un error en el registro de estos, y no, porque su desempeño fiscal realmente fuera tan bajo.
+
+**El IDF (Índice de Desempeño Fiscal) tiende a ser más alto en municipios mas cercanos a Bogotá:** Igual que con el NBI, es bastante lógico pensar que la distancia que tiene un municipio a la capital también afectaria directamente a este índice, estos municipios más cercanos a Bogotá al tener un contacto más directo con la capital se les pueden facilitar procesos de gestión financiera y posiblemente incluso tener acceso a más ingresos que los demás municipios.
+
+Para probar o desmentir esta hipotesis, decidimos hacer un gráfico de dispersión que relacione el **IDF** y la **distancia a Bogotá**
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| results: hide
+
+# Remover datos atipicos usando el rango intercuartil
+
+idfSinAtp <- idf %>%
+  filter(`Nuevo IDF` > quantile(`Nuevo IDF`, 0.25, na.rm = TRUE) - 1.5 * IQR(`Nuevo IDF`, na.rm = TRUE) & 
+           `Nuevo IDF` < quantile(`Nuevo IDF`, 0.75, na.rm = TRUE) + 1.5 * IQR(`Nuevo IDF`, na.rm = TRUE))
+
+#unir datos de distancia
+idfSinAtp <- idfSinAtp |> 
+  left_join(cundinamarca_mapa_distancia_sintilde |> 
+              select(
+                distancia = Distancia_km,
+                municipios = mpio_cnmbr
+              ), by=c("Municipio"="municipios"))
+
+# Grafico de dispersión entre IDF y Distancia a Bogotá (1)
+
+ggplot(idfSinAtp, aes(x= `Nuevo IDF`, y = distancia)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  theme_light() +
+  labs(title = "Relación entre IDF y distancia a Bogotá",
+       x = "IDF",
+       y = "Distancia a Bogotá")
+```
+
+El gráfico muestra la relación entre el Índice de Desempeño Fiscal (IDF) y la distancia a Bogotá. Aunque la línea azul de tendencia sugiere una ligera correlación negativa —es decir, que a menor distancia podría haber un mejor desempeño fiscal—, esta relación es muy tenue y no permite concluir de manera categórica que los municipios más cercanos a la capital necesariamente presenten un mejor IDF.
+
+La gran dispersión de los puntos en el gráfico indica que existen múltiples excepciones a esa posible tendencia. Municipios lejanos presentan tanto altos como bajos niveles de desempeño fiscal, al igual que los más cercanos. Esto sugiere que la distancia a Bogotá no es un factor determinante para explicar el comportamiento del IDF.
+
+Por tanto, es más razonable pensar que el desempeño fiscal de los municipios depende de una combinación de factores locales —como capacidad administrativa, ingresos propios, nivel de endeudamiento, gestión de recursos, entre otros— y no exclusivamente de su ubicación geográfica respecto a la capital.
+
+**El saldo transferencias-ahorro tiende a ser más alto en municipios más cercanos a Bogotá:** El saldo transferencias-ahorro mide de cierta forma que tanto depende el gobierno municipal del gobierno nacional a la hora de financiar proyectos para cada municipio. Si se encuentra una relación entre el saldo transferencias-ahorro y la distancia a Bogotá, eso confirmaría que aquellos municipios más cercanos a Bogotá tienen una mayor atención del gobierno nacional.
+
+Para probar o desmentir esta hipotesis, decidimos hacer un gráfico de dispersión que relacione el **saldo transferencias-ahorro** y la **distancia a Bogotá**
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| results: hide
+
+# Creación de variable saldo transferencias-ahorro
+
+idfSinAtp <- idfSinAtp %>% 
+  mutate(SalTranAh = `Dependencia de las Transferencias` - `Ahorro Corriente`)
+
+# Grafico de dispersión entre saldo transferencias-ahorro y distancia a Bogotá (1)
+
+ggplot(idfSinAtp, aes(x= SalTranAh, y = distancia)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  theme_light() +
+  labs(title = "Relación entre saldo transferencias-ahorro y distancia a Bogotá",
+       x = "Saldo transferencias-ahorro",
+       y = "Distancia a Bogotá")
+
+```
+
+El gráfico evidencia una relación lineal positiva entre el saldo transferencias-ahorro y la distancia a Bogotá. Esto indica que, en general, los municipios más alejados de la capital tienden a tener un saldo más negativo entre transferencias recibidas y capacidad de ahorro, lo que refleja una mayor dependencia de las transferencias del gobierno central y una menor autonomía fiscal.
+
+Por el contrario, los municipios más cercanos a Bogotá muestran una mayor capacidad de ahorro corriente y menor dependencia de recursos externos. Esta tendencia puede explicarse por varios factores. La cercanía a la capital facilita el acceso a inversión pública y privada, mejora la conectividad y el desarrollo económico, y permite que estos municipios generen ingresos propios a través de actividades comerciales, industriales y de servicios.
+
+Además, muchos de estos municipios cercanos actúan como zonas de expansión urbana o como "ciudades dormitorio" para personas que trabajan en Bogotá pero residen en sus alrededores. Este fenómeno impulsa el desarrollo económico local, eleva la base tributaria y contribuye a una mayor autonomía financiera frente al Estado central.
+
+En suma, el gráfico sugiere que la ubicación geográfica influye en la capacidad económica de los municipios: a mayor distancia de Bogotá, mayor dependencia de transferencias; a menor distancia, mayor autosostenibilidad financiera.
+
+**Los municipios más cercanos a Bogotá tienden a tener más capacidad presupuestal:**
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| results: hide
+
+# Grafico de dispersión entre presupuesto fiscal (0) y distancia a bogotá (1)
+ggplot(idfSinAtp, aes(x= `Capacidad de Ejecución de Inversión`, y = distancia)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  theme_light() +
+  labs(title = "Relación entre presupuesto fiscal y distancia a Bogotá",
+       x = "Presupuesto fiscal",
+       y = "Distancia a Bogotá")
+```
+
+El gráfico presenta la relación entre el porcentaje de ejecución presupuestal y la distancia a Bogotá. Aunque la línea azul sugiere una ligera correlación negativa —es decir, que los municipios más cercanos a la capital tenderían a tener una mayor ejecución presupuestal—, la amplia dispersión de los datos impide afirmar con certeza la existencia de un patrón definido.
+
+Lo que sí resulta evidente es que la mayoría de los municipios tienen niveles de ejecución superiores al 50%, y que muy pocos presentan una ejecución inferior a ese umbral. Esto sugiere que, en general, los municipios del departamento logran ejecutar una porción significativa de sus presupuestos, independientemente de su ubicación geográfica.
+
+Además, es importante señalar que la ejecución presupuestal no depende únicamente de la cercanía a la capital, sino que está influenciada por múltiples factores, como la capacidad administrativa, los mecanismos de control fiscal, la estabilidad política y la existencia de buenas prácticas de gobierno.
+
+Es posible, eso sí, que la cercanía a Bogotá implique un mayor nivel de vigilancia y control por parte de entidades de supervisión, lo que podría incentivar una gestión más rigurosa en municipios aledaños. Sin embargo, esta hipótesis requeriría mayor evidencia para ser comprobada con certeza.
+
+## Conclusión
+
+El análisis realizado evidencia una tendencia consistente: los municipios más cercanos a Bogotá tienden a presentar mejores indicadores socioeconómicos y fiscales en comparación con aquellos ubicados a mayor distancia. En particular, se observan niveles más bajos de Necesidades Básicas Insatisfechas (NBI), mejor desempeño fiscal (IDF), mayor autosostenibilidad financiera (reflejada en el saldo transferencias-ahorro), y, aunque con menor fuerza, niveles adecuados de ejecución presupuestal.
+
+Estos hallazgos respaldan la hipótesis de que la proximidad geográfica a la capital del país ofrece ventajas estructurales en términos de acceso a infraestructura, conectividad, inversión pública y privada, así como oportunidades económicas. Municipios cercanos a Bogotá no solo se benefician de un entorno más dinámico, sino que también actúan como zonas de expansión urbana, lo que fortalece su base fiscal y autonomía financiera.
+
+En contraste, los municipios más alejados enfrentan mayores desafíos, caracterizados por mayores niveles de pobreza, mayor dependencia de transferencias del gobierno central y, en algunos casos, menor capacidad institucional para ejecutar sus presupuestos o gestionar recursos. Esta situación revela un patrón de desigualdad territorial estructural que no puede atribuirse exclusivamente a decisiones locales, sino que responde a condicionantes históricos, geográficos y políticos que perpetúan brechas profundas al interior del departamento.
+
+Frente a este panorama, se hace evidente la necesidad de que el gobierno nacional y departamental implementen políticas públicas con enfoque territorial diferencial, que reconozcan las condiciones particulares de los municipios más rezagados. Una estrategia de desarrollo más equitativa y descentralizada debería priorizar la inversión en estos territorios, fortalecer su capacidad institucional y garantizar condiciones mínimas de bienestar para toda la población, independientemente de su ubicación geográfica.
+
+Solo así será posible avanzar hacia un departamento más cohesionado, justo y competitivo, en el que las oportunidades no estén determinadas por la cercanía a un centro de poder, sino por un compromiso real con el desarrollo integral de todos los municipios.
+
+## Bibliografia
+
+-   Definición IDF: https://www.dnp.gov.co/Prensa\_/Noticias/Paginas/dnp-presento-los-resultados-del-indice-de-desempeno-fiscal-para-la-vigencia-2023-de-los-municipios.aspx
+-   Base de datos y definición de IPM y NBI: https://www.datos.gov.co/dataset/POBREZA-Y-VIVIENDA-CUNDINAMARCA/rzwj-9ntv/about_data
+-   Base de datos IDF: https://www.dnp.gov.co/LaEntidad\_/subdireccion-general-descentralizacion-desarrollo-territorial/direccion-descentralizacion-fortalecimiento-fiscal/Paginas/informacion-fiscal-y-financiera.aspx
+
+Nota: El uso de la IA en la producción de este trabajo se gestó por un lado en mejorar las gráficas de los mapas, y por otro lado, en la corrección ortográfica (puntualmente tildes) del texto en algunas partes.
